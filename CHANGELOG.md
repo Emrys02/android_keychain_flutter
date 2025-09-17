@@ -1,3 +1,5 @@
-## 0.0.1
+## 1.0.0
 
-* TODO: Describe initial release.
+* Initial release of the `android_keychain_flutter` plugin.
+* Provides functionality to generate hardware-attested ECDSA key pairs on Android.
+* Supports StrongBox and falls back to the standard hardware-backed keystore.
