@@ -24,4 +24,4 @@ flutter:
     platforms:
       android:
         package: android.keychain.flutter
-        pluginClass: AndroidKeychainFlutter
+        pluginClass: AndroidKeychainFlutterPlugin
