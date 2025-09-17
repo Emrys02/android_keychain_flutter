@@ -1,6 +1,7 @@
 package android.keychain.flutter
 
 import android.content.Context
+import android.keychain.flutter.BuildConfig
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import java.security.KeyPairGenerator
