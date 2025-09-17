@@ -1,6 +1,6 @@
 name: android_keychain_flutter
 description: "A Flutter plugin for generating attested key pairs using Android's KeyStore."
-version: 1.0.6
+version: 1.0.7
 publish_to: 'none'
 
 
