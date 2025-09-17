@@ -1,7 +1,7 @@
 package android.keychain.flutter
 
 import android.content.Context
-import android.keychain.flutter.BuildConfig
+import android.content.pm.ApplicationInfo
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import java.security.KeyPairGenerator
@@ -24,12 +24,13 @@ class AndroidKeychainFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHand
     private lateinit var appContext: Context
     private val CHANNEL_NAME = "android.keychain.flutter/attestation"
     private val TAG = "AndroidKeychainPlugin"
+    private val isDebug: Boolean get() = (appContext.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         appContext = binding.applicationContext
         channel = MethodChannel(binding.binaryMessenger, CHANNEL_NAME)
         channel.setMethodCallHandler(this)
-       if (BuildConfig.DEBUG) Log.d(TAG, "Plugin attached to engine")
+       if (isDebug) Log.d(TAG, "Plugin attached to engine")
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
@@ -41,21 +42,21 @@ class AndroidKeychainFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHand
             "generateKeyPairWithAttestation" -> {
                 val nonce = call.argument<ByteArray>("nonce")
                 if (nonce == null) {
-                    if (BuildConfig.DEBUG) Log.e(TAG, "Nonce is null or missing")
+                    if (isDebug) Log.e(TAG, "Nonce is null or missing")
                     result.error("INVALID_ARGUMENT", "Nonce is required", null)
                     return
                 }
 
                 try {
                     val pair = generateKeyPairWithCheckAttestation(nonce)
-                    if (BuildConfig.DEBUG) Log.d(TAG, "Generated key pair with ${pair.second.size} certificates")
+                    if (isDebug) Log.d(TAG, "Generated key pair with ${pair.second.size} certificates")
                     val map: Map<String, Any> = mapOf(
                         "alias" to pair.first,
                         "certs" to pair.second
                     )
                     result.success(map)
                 } catch (e: Exception) {
-                    if (BuildConfig.DEBUG) Log.e(TAG, "Key generation failed: ${e.message}", e)
+                    if (isDebug) Log.e(TAG, "Key generation failed: ${e.message}", e)
                     result.error("GENERATION_FAILED", "Failed to generate key pair: ${e.message}", null)
                 }
             }
@@ -69,18 +70,18 @@ class AndroidKeychainFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHand
 
         // Delete existing key to avoid conflicts
         if (keyStore.containsAlias(alias)) {
-            if (BuildConfig.DEBUG) Log.d(TAG, "Deleting existing key alias: $alias")
+            if (isDebug) Log.d(TAG, "Deleting existing key alias: $alias")
             keyStore.deleteEntry(alias)
         }
 
         // Try StrongBox first
         try {
-            if (BuildConfig.DEBUG) Log.d(TAG, "Attempting key generation with StrongBox for alias=$alias")
+            if (isDebug) Log.d(TAG, "Attempting key generation with StrongBox for alias=$alias")
             return generateKeyPair(alias, serverNonce, true)
         } catch (e: Exception) {
-            if (BuildConfig.DEBUG) Log.w(TAG, "StrongBox key generation failed: ${e.message}")
+            if (isDebug) Log.w(TAG, "StrongBox key generation failed: ${e.message}")
             if (e.message?.contains("StrongBox", ignoreCase = true) == true) {
-                if (BuildConfig.DEBUG) Log.d(TAG, "Falling back to non-StrongBox key generation")
+                if (isDebug) Log.d(TAG, "Falling back to non-StrongBox key generation")
                 return generateKeyPair(alias, serverNonce, false)
             } else {
                 throw e
@@ -118,7 +119,7 @@ class AndroidKeychainFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHand
             certChain.forEachIndexed { index, cert ->
                 val x509Cert = cert as X509Certificate
                 val hasAttestationExt = x509Cert.getExtensionValue("1.3.6.1.4.1.11129.2.1.17") != null
-                if (BuildConfig.DEBUG) Log.d(TAG, "Certificate $index: Subject=${x509Cert.subjectX500Principal.name}, " +
+                if (isDebug) Log.d(TAG, "Certificate $index: Subject=${x509Cert.subjectX500Principal.name}, " +
                         "Issuer=${x509Cert.issuerX500Principal.name}, " +
                         "Serial=${x509Cert.serialNumber}, " +
                         "HasAttestationExt=$hasAttestationExt")
@@ -132,7 +133,7 @@ class AndroidKeychainFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHand
                 Base64.encodeToString(it.encoded, Base64.NO_WRAP)
             }
 
-            if (BuildConfig.DEBUG) Log.d(TAG, "Generated certificate chain with ${certsBase64.size} certificates")
+            if (isDebug) Log.d(TAG, "Generated certificate chain with ${certsBase64.size} certificates")
             return Pair(alias, certsBase64)
         } catch (e: Exception) {
             throw IllegalStateException("Failed to generate key pair (StrongBox=$useStrongBox): ${e.message}", e)
@@ -143,7 +144,7 @@ class AndroidKeychainFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHand
         try {
             val extBytes = cert.getExtensionValue("1.3.6.1.4.1.11129.2.1.17")
             if (extBytes == null) {
-                if (BuildConfig.DEBUG) Log.d(TAG, "No attestation extension found")
+                if (isDebug) Log.d(TAG, "No attestation extension found")
                 return
             }
             val octetString = ASN1InputStream(extBytes).use { it.readObject() as ASN1OctetString }
@@ -152,16 +153,16 @@ class AndroidKeychainFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHand
             for (i in 0 until seq.size()) {
                 val obj = seq.getObjectAt(i)
                 if (obj is ASN1Sequence && obj.toString().contains("709")) {
-                    if (BuildConfig.DEBUG) Log.d(TAG, "Found AttestationApplicationId candidate at index $i")
+                    if (isDebug) Log.d(TAG, "Found AttestationApplicationId candidate at index $i")
                     obj.objects.asSequence().forEach { inner ->
-                        if (BuildConfig.DEBUG) Log.d(TAG, "  inner: $inner")
+                        if (isDebug) Log.d(TAG, "  inner: $inner")
                     }
                 } else {
-                    if (BuildConfig.DEBUG) Log.d(TAG, "ASN1 field[$i] = $obj")
+                    if (isDebug) Log.d(TAG, "ASN1 field[$i] = $obj")
                 }
             }
         } catch (e: Exception) {
-            if (BuildConfig.DEBUG) Log.e(TAG, "Failed to parse attestation extension: ${e.message}", e)
+            if (isDebug) Log.e(TAG, "Failed to parse attestation extension: ${e.message}", e)
         }
     }
 }
