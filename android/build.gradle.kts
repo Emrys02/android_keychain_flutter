@@ -27,6 +27,5 @@ android {
 
 dependencies {
     implementation("androidx.annotation:annotation:1.6.0")
-    implementation("org.bouncycastle:bcprov-jdk15to18:1.70")
     implementation("org.bouncycastle:bcpkix-jdk15to18:1.70")
 }
