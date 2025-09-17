@@ -11,6 +11,10 @@ android {
         minSdk = 21
     }
 
+    buildFeatures {
+        buildConfig = true 
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
