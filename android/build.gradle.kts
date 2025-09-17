@@ -22,10 +22,7 @@ android {
 }
 
 dependencies {
-    // Flutter embedding
     implementation("androidx.annotation:annotation:1.6.0")
-
-    // BouncyCastle for ASN.1 and attestation parsing
     implementation("org.bouncycastle:bcprov-jdk15to18:1.70")
     implementation("org.bouncycastle:bcpkix-jdk15to18:1.70")
 }
